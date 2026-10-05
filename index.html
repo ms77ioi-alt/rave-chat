@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#06101B">
-<title>RAVE Chart</title>
+<title>RAVE Chart V4</title>
 <link rel="manifest" href="/manifest.json">
 <style>
 :root{
@@ -98,13 +98,26 @@ canvas{display:block;width:100%}
 @media(max-width:380px){
  .watch-item{grid-template-columns:minmax(0,1fr) 84px 58px}.spark{width:58px}.big-price{font-size:41px}.score-wrap{grid-template-columns:116px 1fr}.score-ring{width:108px;height:108px}
 }
+
+.subpage{display:none;margin-top:12px}
+.subpage.active{display:block}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.info-card{border:1px solid var(--line);background:#091724;border-radius:12px;padding:11px}
+.info-card small{display:block;color:var(--muted);font-size:11px}
+.info-card b{display:block;margin-top:4px;font-size:15px}
+.news-item{border-bottom:1px solid #173047;padding:12px 0}
+.news-item:last-child{border-bottom:0}
+.news-item a{color:#dfe9f2;text-decoration:none;font-weight:800}
+.news-item small{display:block;color:var(--muted);margin-top:4px}
+.tab-note{padding:16px;color:var(--muted);font-size:13px;line-height:1.6}
+
 </style>
 </head>
 <body>
 <div class="app">
   <div id="homeView">
     <div class="topbar">
-      <div class="brand">RAVE <span>Chart</span><small style="font-size:10px;font-style:normal;color:#6f8aa1;margin-left:6px;vertical-align:middle">v3.2</small></div>
+      <div class="brand">RAVE <span>Chart</span><small style="font-size:10px;font-style:normal;color:#6f8aa1;margin-left:6px;vertical-align:middle">v4</small></div>
       <button class="iconbtn" id="settingsBtn">⚙︎</button>
     </div>
     <div class="searchrow">
@@ -154,9 +167,14 @@ canvas{display:block;width:100%}
       </div>
     </div>
 
-    <div class="rangebar">
-      <button data-range="1mo">1달</button><button data-range="3mo" class="active">3달</button>
-      <button data-range="6mo">6달</button><button data-range="1y">1년</button><button data-range="2y">2년</button><button data-range="5y">5년</button>
+    <div class="rangebar" style="grid-template-columns:repeat(7,1fr)">
+      <button data-range="1mo" data-label="1주">1주</button>
+      <button data-range="1mo">1달</button>
+      <button data-range="3mo" class="active">3달</button>
+      <button data-range="6mo">6달</button>
+      <button data-range="1y">1년</button>
+      <button data-range="2y">2년</button>
+      <button data-range="5y">5년</button>
     </div>
 
     <div class="legendbar">
@@ -177,10 +195,45 @@ canvas{display:block;width:100%}
 
     <div class="detail-subnav">
       <button class="active" id="subChart"><b>▥</b>차트</button>
-      <button><b>⌁</b>지표</button>
+      <button id="subIndicators"><b>⌁</b>지표</button>
       <button id="subAnalysis"><b>☆</b>분석</button>
-      <button><b>▤</b>뉴스</button>
-      <button><b>ⓘ</b>종목정보</button>
+      <button id="subNews"><b>▤</b>뉴스</button>
+      <button id="subInfo"><b>ⓘ</b>종목정보</button>
+    </div>
+
+    <div id="indicatorPage" class="subpage">
+      <section class="panel" style="padding:14px">
+        <h2 class="section-title">기술지표 요약</h2>
+        <div class="info-grid">
+          <div class="info-card"><small>RSI(14)</small><b id="infoRsi">-</b></div>
+          <div class="info-card"><small>MACD Histogram</small><b id="infoMacd">-</b></div>
+          <div class="info-card"><small>MA5</small><b id="infoMa5">-</b></div>
+          <div class="info-card"><small>MA20</small><b id="infoMa20">-</b></div>
+          <div class="info-card"><small>MA60</small><b id="infoMa60">-</b></div>
+          <div class="info-card"><small>MA120</small><b id="infoMa120">-</b></div>
+        </div>
+      </section>
+    </div>
+
+    <div id="newsPage" class="subpage">
+      <section class="panel" style="padding:14px">
+        <h2 class="section-title">뉴스</h2>
+        <div id="newsList" class="tab-note">종목을 선택하면 관련 뉴스 검색 링크를 표시합니다.</div>
+      </section>
+    </div>
+
+    <div id="infoPage" class="subpage">
+      <section class="panel" style="padding:14px">
+        <h2 class="section-title">종목정보</h2>
+        <div class="info-grid">
+          <div class="info-card"><small>티커</small><b id="infoTicker">-</b></div>
+          <div class="info-card"><small>거래소</small><b id="infoExchange">-</b></div>
+          <div class="info-card"><small>통화</small><b id="infoCurrency">-</b></div>
+          <div class="info-card"><small>최근 종가</small><b id="infoLast">-</b></div>
+          <div class="info-card"><small>최근 고가</small><b id="infoHigh">-</b></div>
+          <div class="info-card"><small>최근 저가</small><b id="infoLow">-</b></div>
+        </div>
+      </section>
     </div>
   </div>
 
@@ -233,8 +286,8 @@ canvas{display:block;width:100%}
     <button class="navbtn active" id="navHome"><b>⌂</b>홈</button>
     <button class="navbtn" id="navSearch"><b>⌕</b>검색</button>
     <button class="navbtn" id="navWatch"><b>☆</b>관심종목</button>
-    <button class="navbtn"><b>▥</b>포트폴리오</button>
-    <button class="navbtn"><b>•••</b>더보기</button>
+    <button class="navbtn" id="navPortfolio"><b>▥</b>포트폴리오</button>
+    <button class="navbtn" id="navMore"><b>•••</b>더보기</button>
   </div>
 </div>
 
@@ -356,6 +409,7 @@ function watchData(){const w=getWatch();return w.length?w:defaultWatch()}
 const TAB_DATA={
  kr:[
   {symbol:"005930.KS",name:"삼성전자",exchange:"KOSPI"},
+  {symbol:"010140.KS",name:"삼성중공업",exchange:"KOSPI"},
   {symbol:"000660.KS",name:"SK하이닉스",exchange:"KOSPI"},
   {symbol:"005380.KS",name:"현대차",exchange:"KOSPI"},
   {symbol:"042660.KS",name:"한화오션",exchange:"KOSPI"},
@@ -455,6 +509,42 @@ function fillAnalysis(ind,meta){
  $("buyZone").textContent=`${fmtPrice(ind.buyLow,meta.currency)} ~ ${fmtPrice(ind.buyHigh,meta.currency)}`;$("riskZone").textContent=`${fmtPrice(ind.risk,meta.currency)} 이상`;$("stopZone").textContent=`${fmtPrice(ind.stop,meta.currency)} 이하`;$("analysis").textContent=ind.analysis;
  $("analysisTitle").textContent=`${meta.symbol} 분석결과`;$("analysisSub").textContent=meta.longName||meta.shortName||meta.symbol
 }
+
+function setDetailTab(tab){
+ ["subChart","subIndicators","subAnalysis","subNews","subInfo"].forEach(id=>$(id)?.classList.remove("active"));
+ ["indicatorPage","newsPage","infoPage"].forEach(id=>$(id)?.classList.remove("active"));
+ if(tab==="chart"){
+   $("subChart")?.classList.add("active");
+   document.querySelector(".chart-box")?.classList.remove("hidden");
+   document.querySelector(".legendbar")?.classList.remove("hidden");
+ }else{
+   document.querySelector(".chart-box")?.classList.add("hidden");
+   document.querySelector(".legendbar")?.classList.add("hidden");
+   if(tab==="indicators"){ $("subIndicators")?.classList.add("active"); $("indicatorPage")?.classList.add("active"); }
+   if(tab==="news"){ $("subNews")?.classList.add("active"); $("newsPage")?.classList.add("active"); }
+   if(tab==="info"){ $("subInfo")?.classList.add("active"); $("infoPage")?.classList.add("active"); }
+ }
+}
+function fillExtraTabs(payload,ind){
+ const rows=payload.rows,meta=payload.meta,last=rows.at(-1);
+ $("infoRsi").textContent=ind.rv.toFixed(1);
+ $("infoMacd").textContent=ind.mh.toFixed(3);
+ $("infoMa5").textContent=fmtPrice(ind.m5,meta.currency);
+ $("infoMa20").textContent=fmtPrice(ind.m20,meta.currency);
+ $("infoMa60").textContent=fmtPrice(ind.m60,meta.currency);
+ $("infoMa120").textContent=fmtPrice(ind.m120,meta.currency);
+
+ $("infoTicker").textContent=meta.symbol||"-";
+ $("infoExchange").textContent=meta.fullExchangeName||meta.exchangeName||"-";
+ $("infoCurrency").textContent=meta.currency||"-";
+ $("infoLast").textContent=fmtPrice(last.close,meta.currency);
+ $("infoHigh").textContent=fmtPrice(last.high,meta.currency);
+ $("infoLow").textContent=fmtPrice(last.low,meta.currency);
+
+ const q=encodeURIComponent((CURRENT?.name||meta.symbol)+" stock news");
+ $("newsList").innerHTML=`<div class="news-item"><a href="https://www.google.com/search?q=${q}&tbm=nws" target="_blank" rel="noopener">관련 최신 뉴스 검색</a><small>${esc(CURRENT?.name||meta.symbol)} 뉴스 결과를 새 창에서 엽니다.</small></div>`;
+}
+
 function renderDetail(payload){
  CURRENT_PAYLOAD=payload;const rows=payload.rows,meta=payload.meta,ind=analyze(rows,meta),last=rows.at(-1),prev=rows.at(-2)?.close??last.close,chg=(last.close-prev)/prev*100;
  CURRENT_IND=ind;CURRENT={symbol:meta.symbol,name:meta.longName||meta.shortName||meta.symbol,exchange:meta.fullExchangeName||meta.exchangeName||"",currency:meta.currency||""};
@@ -465,7 +555,7 @@ function renderDetail(payload){
  $("open").textContent=fmtPrice(last.open,meta.currency,false);$("high").textContent=fmtPrice(last.high,meta.currency,false);$("low").textContent=fmtPrice(last.low,meta.currency,false);$("volume").textContent=fmtVol(last.volume);
  $("legend5").textContent=`MA5 ${fmtPrice(ind.m5,meta.currency,false)}`;$("legend20").textContent=`MA20 ${fmtPrice(ind.m20,meta.currency,false)}`;$("legend60").textContent=`MA60 ${fmtPrice(ind.m60,meta.currency,false)}`;$("legend120").textContent=`MA120 ${fmtPrice(ind.m120,meta.currency,false)}`;
  $("volLabel").textContent=fmtVol(last.volume);$("rsiLabel").textContent=ind.rv.toFixed(1);$("macdLabel").textContent=ind.mh.toFixed(3);$("signalLabel").textContent=lastValid(ind.macd.signal).toFixed(3);$("bbLabel").textContent=`상단 ${fmtPrice(ind.bu,meta.currency,false)} · 중간 ${fmtPrice(ind.m20,meta.currency,false)} · 하단 ${fmtPrice(ind.bl,meta.currency,false)}`;
- drawPrice(rows,ind);drawVolume(rows);drawRSI(ind.rsi);drawMACD(ind.macd);drawBB(rows,ind);fillAnalysis(ind,meta);updateStars();showView("chart")
+ drawPrice(rows,ind);drawVolume(rows);drawRSI(ind.rsi);drawMACD(ind.macd);drawBB(rows,ind);fillAnalysis(ind,meta);fillExtraTabs(payload,ind);updateStars();showView("chart");setDetailTab("chart")
 }
 async function loadChart(symbol){
  showLoad("시세와 차트를 불러오는 중입니다…");
@@ -476,6 +566,7 @@ async function loadChart(symbol){
 const LOCAL_SEARCH = {
  "삼성전자":{symbol:"005930.KS",name:"삼성전자",exchange:"KOSPI",type:"주식"},
  "삼성전자우":{symbol:"005935.KS",name:"삼성전자우",exchange:"KOSPI",type:"주식"},
+ "삼성중공업":{symbol:"010140.KS",name:"삼성중공업",exchange:"KOSPI",type:"주식"},
  "sk하이닉스":{symbol:"000660.KS",name:"SK하이닉스",exchange:"KOSPI",type:"주식"},
  "현대차":{symbol:"005380.KS",name:"현대차",exchange:"KOSPI",type:"주식"},
  "한화오션":{symbol:"042660.KS",name:"한화오션",exchange:"KOSPI",type:"주식"},
@@ -548,9 +639,11 @@ $("stockTabs").addEventListener("click",e=>{
  setActiveTab(b.dataset.tab);
 });
 $("searchBtn").addEventListener("click",doSearch);$("searchInput").addEventListener("keydown",e=>{if(e.key==="Enter")doSearch()});
-$("backBtn").addEventListener("click",()=>showView("home"));$("analysisBackBtn").addEventListener("click",()=>showView("chart"));$("subAnalysis").addEventListener("click",()=>showView("analysis"));
+$("backBtn").addEventListener("click",()=>showView("home"));$("analysisBackBtn").addEventListener("click",()=>showView("chart"));$("subChart").addEventListener("click",()=>setDetailTab("chart"));$("subIndicators").addEventListener("click",()=>setDetailTab("indicators"));$("subAnalysis").addEventListener("click",()=>showView("analysis"));$("subNews").addEventListener("click",()=>setDetailTab("news"));$("subInfo").addEventListener("click",()=>setDetailTab("info"));
 $("watchBtn").addEventListener("click",toggleWatch);$("analysisStar").addEventListener("click",toggleWatch);
-$("navHome").addEventListener("click",()=>showView("home"));$("navSearch").addEventListener("click",()=>{showView("home");setTimeout(()=>$("searchInput").focus(),250)});$("navWatch").addEventListener("click",()=>{showView("home");setTimeout(()=>$("watchlist").scrollIntoView({behavior:"smooth"}),200)});
+$("navHome").addEventListener("click",()=>showView("home"));
+$("navPortfolio").addEventListener("click",()=>alert("포트폴리오 기능은 다음 단계에서 보유종목 저장 기능으로 연결할게요."));
+$("navMore").addEventListener("click",()=>alert("RAVE Chart V4 · 검색/차트/지표/분석/뉴스/종목정보 기능이 연결되어 있습니다."));$("navSearch").addEventListener("click",()=>{showView("home");setTimeout(()=>$("searchInput").focus(),250)});$("navWatch").addEventListener("click",()=>{showView("home");setTimeout(()=>$("watchlist").scrollIntoView({behavior:"smooth"}),200)});
 $("settingsBtn").addEventListener("click",()=>{if(confirm("관심종목 목록을 초기화할까요?")){localStorage.removeItem("raveWatch");renderWatch()}});
 document.querySelectorAll(".rangebar button").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".rangebar button").forEach(x=>x.classList.remove("active"));b.classList.add("active");RANGE=b.dataset.range;if(CURRENT)loadChart(CURRENT.symbol)}));
 setActiveTab("watch");renderIndexes();
