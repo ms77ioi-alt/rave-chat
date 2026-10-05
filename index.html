@@ -116,8 +116,12 @@ canvas{display:block;width:100%}
     <div id="loading" class="loading">불러오는 중…</div>
     <div id="error" class="error"></div>
 
-    <div class="tabs">
-      <button class="active">관심종목</button><button>국내주식</button><button>미국주식</button><button>ETF</button><button>최근검색</button>
+    <div class="tabs" id="stockTabs">
+      <button class="active" data-tab="watch">관심종목</button>
+      <button data-tab="kr">국내주식</button>
+      <button data-tab="us">미국주식</button>
+      <button data-tab="etf">ETF</button>
+      <button data-tab="recent">최근검색</button>
     </div>
 
     <section class="section">
@@ -332,31 +336,103 @@ function drawSpark(canvas,rows){
 
 function getWatch(){try{return JSON.parse(localStorage.getItem("raveWatch")||"[]")}catch{return[]}}
 function setWatch(a){localStorage.setItem("raveWatch",JSON.stringify(a))}
-function defaultWatch(){return[{symbol:"RIG",name:"Transocean",exchange:"NYSE"},{symbol:"SCHD",name:"Schwab US Dividend Equity ETF",exchange:"NYSEArca"},{symbol:"QNDX",name:"Nasdaq 100 Daily 2x",exchange:"NASDAQ"},{symbol:"NKE",name:"Nike",exchange:"NYSE"},{symbol:"014280.KS",name:"금강공업",exchange:"KOSPI"}]}
+function getRecent(){try{return JSON.parse(localStorage.getItem("raveRecent")||"[]")}catch{return[]}}
+function setRecent(a){localStorage.setItem("raveRecent",JSON.stringify(a))}
+function addRecent(item){
+ if(!item?.symbol)return;
+ let a=getRecent().filter(x=>x.symbol!==item.symbol);
+ a.unshift({symbol:item.symbol,name:item.name||item.symbol,exchange:item.exchange||""});
+ setRecent(a.slice(0,12));
+}
+function defaultWatch(){return[
+ {symbol:"RIG",name:"Transocean",exchange:"NYSE"},
+ {symbol:"SCHD",name:"Schwab US Dividend Equity ETF",exchange:"NYSEArca"},
+ {symbol:"QNDX",name:"Nasdaq 100 Daily 2x",exchange:"NASDAQ"},
+ {symbol:"NKE",name:"Nike",exchange:"NYSE"},
+ {symbol:"014280.KS",name:"금강공업",exchange:"KOSPI"}
+]}
 function watchData(){const w=getWatch();return w.length?w:defaultWatch()}
+
+const TAB_DATA={
+ kr:[
+  {symbol:"005930.KS",name:"삼성전자",exchange:"KOSPI"},
+  {symbol:"000660.KS",name:"SK하이닉스",exchange:"KOSPI"},
+  {symbol:"005380.KS",name:"현대차",exchange:"KOSPI"},
+  {symbol:"042660.KS",name:"한화오션",exchange:"KOSPI"},
+  {symbol:"014280.KS",name:"금강공업",exchange:"KOSPI"}
+ ],
+ us:[
+  {symbol:"RIG",name:"Transocean",exchange:"NYSE"},
+  {symbol:"NKE",name:"Nike",exchange:"NYSE"},
+  {symbol:"NVDA",name:"NVIDIA",exchange:"NASDAQ"},
+  {symbol:"AAPL",name:"Apple",exchange:"NASDAQ"},
+  {symbol:"BMY",name:"Bristol-Myers Squibb",exchange:"NYSE"}
+ ],
+ etf:[
+  {symbol:"SCHD",name:"Schwab US Dividend Equity ETF",exchange:"NYSEArca"},
+  {symbol:"SCHG",name:"Schwab US Large-Cap Growth ETF",exchange:"NYSEArca"},
+  {symbol:"QQQM",name:"Invesco NASDAQ 100 ETF",exchange:"NASDAQ"},
+  {symbol:"QNDX",name:"Nasdaq 100 Daily 2x",exchange:"NASDAQ"},
+  {symbol:"GPIQ",name:"Goldman Sachs Nasdaq-100 Premium Income ETF",exchange:"NASDAQ"}
+ ]
+};
+let CURRENT_TAB="watch";
+
+function dataForTab(tab){
+ if(tab==="watch")return watchData();
+ if(tab==="recent")return getRecent();
+ return TAB_DATA[tab]||watchData();
+}
 function updateStars(){
- const on=CURRENT&&watchData().some(x=>x.symbol===CURRENT.symbol);$("watchBtn").textContent=on?"★":"☆";$("analysisStar").textContent=on?"★":"☆"
+ const on=CURRENT&&watchData().some(x=>x.symbol===CURRENT.symbol);
+ $("watchBtn").textContent=on?"★":"☆";
+ $("analysisStar").textContent=on?"★":"☆"
 }
 function toggleWatch(){
- if(!CURRENT)return;let w=getWatch();if(!w.length)w=defaultWatch();const i=w.findIndex(x=>x.symbol===CURRENT.symbol);
- if(i>=0)w.splice(i,1);else w.unshift({symbol:CURRENT.symbol,name:CURRENT.name,exchange:CURRENT.exchange});setWatch(w.slice(0,20));updateStars();renderWatch()
+ if(!CURRENT)return;
+ let w=getWatch();if(!w.length)w=defaultWatch();
+ const i=w.findIndex(x=>x.symbol===CURRENT.symbol);
+ if(i>=0)w.splice(i,1);
+ else w.unshift({symbol:CURRENT.symbol,name:CURRENT.name,exchange:CURRENT.exchange});
+ setWatch(w.slice(0,20));
+ updateStars();
+ if(CURRENT_TAB==="watch")renderTab("watch");
 }
-
-function renderWatch(){
- const w=watchData();
- $("watchlist").innerHTML=w.map((x,i)=>`<div class="watch-item" data-s="${esc(x.symbol)}">
-  <div class="watch-main"><div class="watch-symbol">☆ ${esc(x.symbol)}</div><div class="watch-name">${esc(x.name)}${x.exchange?" · "+esc(x.exchange):""}</div></div>
+function setActiveTab(tab){
+ CURRENT_TAB=tab;
+ document.querySelectorAll("#stockTabs button").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));
+ renderTab(tab);
+}
+function renderTab(tab=CURRENT_TAB){
+ const w=dataForTab(tab);
+ if(!w.length){
+  $("watchlist").innerHTML='<div style="padding:28px 16px;text-align:center;color:#91a7ba">최근 검색한 종목이 없습니다.</div>';
+  return;
+ }
+ $("watchlist").innerHTML=w.map((x,i)=>`<div class="watch-item" data-s="${esc(x.symbol)}" data-name="${esc(x.name)}" data-ex="${esc(x.exchange||"")}">
+  <div class="watch-main"><div class="watch-symbol">${tab==="watch"?"☆ ":""}${esc(x.symbol)}</div><div class="watch-name">${esc(x.name)}${x.exchange?" · "+esc(x.exchange):""}</div></div>
   <canvas class="spark" id="spark${i}" width="74" height="34"></canvas>
   <div class="watch-quote"><div class="watch-price" id="wp${i}">-</div><div class="watch-change" id="wc${i}">-</div></div></div>`).join("");
- document.querySelectorAll(".watch-item").forEach(el=>el.addEventListener("click",()=>loadChart(el.dataset.s)));
+ document.querySelectorAll(".watch-item").forEach(el=>el.addEventListener("click",()=>{
+   addRecent({symbol:el.dataset.s,name:el.dataset.name,exchange:el.dataset.ex});
+   loadChart(el.dataset.s);
+ }));
  loadWatchQuotes(w)
 }
+function renderWatch(){renderTab(CURRENT_TAB)}
 async function loadWatchQuotes(w){
  await Promise.all(w.map(async(x,i)=>{
   try{
-   const r=await fetch(`/api/chart?symbol=${encodeURIComponent(x.symbol)}&range=1mo`,{cache:"no-store"}),j=await r.json();if(!r.ok||!j.rows?.length)return;
+   const r=await fetch(`/api/chart?symbol=${encodeURIComponent(x.symbol)}&range=1mo`,{cache:"no-store"});
+   const j=await r.json();
+   if(!r.ok||!j.rows?.length)return;
    const rows=j.rows,last=rows.at(-1),prev=rows.at(-2)?.close??last.close,chg=(last.close-prev)/prev*100;
-   $("wp"+i).textContent=fmtPrice(last.close,j.meta?.currency,false);$("wc"+i).textContent=(chg>=0?"+":"")+chg.toFixed(2)+"%";$("wc"+i).className="watch-change "+(chg>=0?"up":"down");drawSpark($("spark"+i),rows.slice(-20))
+   const p=$("wp"+i),c=$("wc"+i),s=$("spark"+i);
+   if(!p||!c||!s)return;
+   p.textContent=fmtPrice(last.close,j.meta?.currency,false);
+   c.textContent=(chg>=0?"+":"")+chg.toFixed(2)+"%";
+   c.className="watch-change "+(chg>=0?"up":"down");
+   drawSpark(s,rows.slice(-20))
   }catch{}
  }))
 }
@@ -398,16 +474,23 @@ async function doSearch(){
  const q=$("searchInput").value.trim();if(!q)return;showLoad("종목을 찾는 중입니다…");$("results").style.display="none";
  try{const r=await fetch(`/api/search?q=${encodeURIComponent(q)}`,{cache:"no-store"}),j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"검색하지 못했습니다.");const items=j.results||[];if(!items.length)throw new Error("검색 결과가 없습니다.");
  $("results").innerHTML=items.map(x=>`<div class="result" data-symbol="${esc(x.symbol)}"><div><div class="name">${esc(x.name||x.symbol)}</div><div class="sub">${esc(x.exchange||"")} · ${esc(x.type||"")}</div></div><div class="sym">${esc(x.symbol)}</div></div>`).join("");$("results").style.display="block";
- document.querySelectorAll(".result").forEach(el=>el.addEventListener("click",()=>{$("results").style.display="none";$("searchInput").value=el.dataset.symbol;loadChart(el.dataset.symbol)}))
+ document.querySelectorAll(".result").forEach(el=>el.addEventListener("click",()=>{
+   const found=items.find(x=>x.symbol===el.dataset.symbol);
+   if(found)addRecent({symbol:found.symbol,name:found.name||found.symbol,exchange:found.exchange||""});
+   $("results").style.display="none";
+   $("searchInput").value=el.dataset.symbol;
+   loadChart(el.dataset.symbol)
+ }))
  }catch(e){showError(e.message)}finally{hideLoad()}
 }
+document.querySelectorAll("#stockTabs button").forEach(b=>b.addEventListener("click",()=>setActiveTab(b.dataset.tab)));
 $("searchBtn").addEventListener("click",doSearch);$("searchInput").addEventListener("keydown",e=>{if(e.key==="Enter")doSearch()});
 $("backBtn").addEventListener("click",()=>showView("home"));$("analysisBackBtn").addEventListener("click",()=>showView("chart"));$("subAnalysis").addEventListener("click",()=>showView("analysis"));
 $("watchBtn").addEventListener("click",toggleWatch);$("analysisStar").addEventListener("click",toggleWatch);
 $("navHome").addEventListener("click",()=>showView("home"));$("navSearch").addEventListener("click",()=>{showView("home");setTimeout(()=>$("searchInput").focus(),250)});$("navWatch").addEventListener("click",()=>{showView("home");setTimeout(()=>$("watchlist").scrollIntoView({behavior:"smooth"}),200)});
 $("settingsBtn").addEventListener("click",()=>{if(confirm("관심종목 목록을 초기화할까요?")){localStorage.removeItem("raveWatch");renderWatch()}});
 document.querySelectorAll(".rangebar button").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".rangebar button").forEach(x=>x.classList.remove("active"));b.classList.add("active");RANGE=b.dataset.range;if(CURRENT)loadChart(CURRENT.symbol)}));
-renderWatch();renderIndexes();
+setActiveTab("watch");renderIndexes();
 if("serviceWorker" in navigator)navigator.serviceWorker.register("/sw.js").catch(()=>{});
 </script>
 </body>
