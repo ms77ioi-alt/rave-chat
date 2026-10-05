@@ -1,9 +1,9 @@
 {
-  "name": "RAVE Chart",
+  "name": "RAVE Chart · Ultimate",
   "short_name": "RAVE Chart",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#06101b",
   "theme_color": "#06101b",
-  "description": "한글·영문·티커 검색을 지원하는 모바일 주식 차트 분석 앱"
+  "description": "한글 종목명·종목코드·영문명·티커 검색을 지원하는 모바일 주식 차트 분석 앱"
 }
