@@ -34,7 +34,7 @@ button{cursor:pointer}
 .loading{background:#0c2134;border:1px solid #264663;color:#bed4e5}.error{background:#4b2026;border:1px solid #823a43;color:#ffdadd}
 .tabs{display:flex;gap:4px;overflow:auto;scrollbar-width:none;margin:12px 0 10px;border-bottom:1px solid var(--line)}
 .tabs::-webkit-scrollbar{display:none}
-.tabs button{white-space:nowrap;background:none;border:0;color:#9fb3c4;padding:10px 10px 11px;font-weight:700;border-bottom:2px solid transparent}
+.tabs button{white-space:nowrap;background:none;border:0;color:#9fb3c4;padding:10px 10px 11px;font-weight:700;border-bottom:2px solid transparent;touch-action:manipulation;-webkit-tap-highlight-color:transparent;cursor:pointer}
 .tabs button.active{color:#fff;border-color:#53afff}
 .section{margin-top:14px}
 .section-title{font-size:19px;font-weight:950;margin:0 0 8px}
@@ -104,7 +104,7 @@ canvas{display:block;width:100%}
 <div class="app">
   <div id="homeView">
     <div class="topbar">
-      <div class="brand">RAVE <span>Chart</span></div>
+      <div class="brand">RAVE <span>Chart</span><small style="font-size:10px;font-style:normal;color:#6f8aa1;margin-left:6px;vertical-align:middle">v3.2</small></div>
       <button class="iconbtn" id="settingsBtn">⚙︎</button>
     </div>
     <div class="searchrow">
@@ -458,7 +458,9 @@ function fillAnalysis(ind,meta){
 function renderDetail(payload){
  CURRENT_PAYLOAD=payload;const rows=payload.rows,meta=payload.meta,ind=analyze(rows,meta),last=rows.at(-1),prev=rows.at(-2)?.close??last.close,chg=(last.close-prev)/prev*100;
  CURRENT_IND=ind;CURRENT={symbol:meta.symbol,name:meta.longName||meta.shortName||meta.symbol,exchange:meta.fullExchangeName||meta.exchangeName||"",currency:meta.currency||""};
- $("ticker").textContent=meta.symbol;$("company").textContent=(meta.longName||meta.shortName||meta.symbol)+" · "+(meta.fullExchangeName||meta.exchangeName||"");
+ const chosen=(SELECTED_LABEL&&SELECTED_LABEL.symbol===meta.symbol)?SELECTED_LABEL:null;
+ $("ticker").textContent=chosen?.name||meta.symbol;
+ $("company").textContent=(chosen?meta.symbol+" · ":"")+(meta.longName||meta.shortName||meta.symbol)+" · "+(meta.fullExchangeName||meta.exchangeName||"");
  $("price").innerHTML=`${fmtPrice(last.close,meta.currency,false)} <small>${currencyUnit(meta.currency)}</small>`;$("change").textContent=(chg>=0?"+":"")+chg.toFixed(2)+"%";$("change").className="big-change "+(chg>=0?"up":"down");
  $("open").textContent=fmtPrice(last.open,meta.currency,false);$("high").textContent=fmtPrice(last.high,meta.currency,false);$("low").textContent=fmtPrice(last.low,meta.currency,false);$("volume").textContent=fmtVol(last.volume);
  $("legend5").textContent=`MA5 ${fmtPrice(ind.m5,meta.currency,false)}`;$("legend20").textContent=`MA20 ${fmtPrice(ind.m20,meta.currency,false)}`;$("legend60").textContent=`MA60 ${fmtPrice(ind.m60,meta.currency,false)}`;$("legend120").textContent=`MA120 ${fmtPrice(ind.m120,meta.currency,false)}`;
@@ -470,20 +472,81 @@ async function loadChart(symbol){
  try{const r=await fetch(`/api/chart?symbol=${encodeURIComponent(symbol)}&range=${encodeURIComponent(RANGE)}`,{cache:"no-store"}),j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"시세를 불러오지 못했습니다.");if(!j.rows||j.rows.length<15)throw new Error("분석에 필요한 일봉 데이터가 부족합니다.");renderDetail(j)}
  catch(e){showView("home");showError(e.message)}finally{hideLoad()}
 }
-async function doSearch(){
- const q=$("searchInput").value.trim();if(!q)return;showLoad("종목을 찾는 중입니다…");$("results").style.display="none";
- try{const r=await fetch(`/api/search?q=${encodeURIComponent(q)}`,{cache:"no-store"}),j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"검색하지 못했습니다.");const items=j.results||[];if(!items.length)throw new Error("검색 결과가 없습니다.");
- $("results").innerHTML=items.map(x=>`<div class="result" data-symbol="${esc(x.symbol)}"><div><div class="name">${esc(x.name||x.symbol)}</div><div class="sub">${esc(x.exchange||"")} · ${esc(x.type||"")}</div></div><div class="sym">${esc(x.symbol)}</div></div>`).join("");$("results").style.display="block";
- document.querySelectorAll(".result").forEach(el=>el.addEventListener("click",()=>{
-   const found=items.find(x=>x.symbol===el.dataset.symbol);
-   if(found)addRecent({symbol:found.symbol,name:found.name||found.symbol,exchange:found.exchange||""});
-   $("results").style.display="none";
-   $("searchInput").value=el.dataset.symbol;
-   loadChart(el.dataset.symbol)
- }))
- }catch(e){showError(e.message)}finally{hideLoad()}
+
+const LOCAL_SEARCH = {
+ "삼성전자":{symbol:"005930.KS",name:"삼성전자",exchange:"KOSPI",type:"주식"},
+ "삼성전자우":{symbol:"005935.KS",name:"삼성전자우",exchange:"KOSPI",type:"주식"},
+ "sk하이닉스":{symbol:"000660.KS",name:"SK하이닉스",exchange:"KOSPI",type:"주식"},
+ "현대차":{symbol:"005380.KS",name:"현대차",exchange:"KOSPI",type:"주식"},
+ "한화오션":{symbol:"042660.KS",name:"한화오션",exchange:"KOSPI",type:"주식"},
+ "금강공업":{symbol:"014280.KS",name:"금강공업",exchange:"KOSPI",type:"주식"},
+ "schd":{symbol:"SCHD",name:"Schwab US Dividend Equity ETF",exchange:"NYSEArca",type:"ETF"},
+ "슈드":{symbol:"SCHD",name:"Schwab US Dividend Equity ETF",exchange:"NYSEArca",type:"ETF"},
+ "rig":{symbol:"RIG",name:"Transocean",exchange:"NYSE",type:"Equity"},
+ "트랜스오션":{symbol:"RIG",name:"Transocean",exchange:"NYSE",type:"Equity"},
+ "nke":{symbol:"NKE",name:"Nike",exchange:"NYSE",type:"Equity"},
+ "나이키":{symbol:"NKE",name:"Nike",exchange:"NYSE",type:"Equity"},
+ "qndx":{symbol:"QNDX",name:"Nasdaq 100 Daily 2x",exchange:"NASDAQ",type:"ETF"},
+ "schg":{symbol:"SCHG",name:"Schwab US Large-Cap Growth ETF",exchange:"NYSEArca",type:"ETF"},
+ "qqqm":{symbol:"QQQM",name:"Invesco NASDAQ 100 ETF",exchange:"NASDAQ",type:"ETF"},
+ "gpiq":{symbol:"GPIQ",name:"Goldman Sachs Nasdaq-100 Premium Income ETF",exchange:"NASDAQ",type:"ETF"},
+ "nvda":{symbol:"NVDA",name:"NVIDIA",exchange:"NASDAQ",type:"Equity"},
+ "aapl":{symbol:"AAPL",name:"Apple",exchange:"NASDAQ",type:"Equity"},
+ "bmy":{symbol:"BMY",name:"Bristol-Myers Squibb",exchange:"NYSE",type:"Equity"}
+};
+let SELECTED_LABEL=null;
+function normSearchKey(s){return String(s||"").trim().toLowerCase().replace(/\s+/g,"")}
+function directTickerResult(q){
+ const raw=String(q||"").trim();
+ if(/^[A-Za-z][A-Za-z0-9.^-]{0,14}$/.test(raw)){
+   const known=LOCAL_SEARCH[normSearchKey(raw)];
+   return known||{symbol:raw.toUpperCase(),name:raw.toUpperCase(),exchange:"",type:"티커 직접 검색"};
+ }
+ if(/^\d{6}\.(KS|KQ)$/i.test(raw)){
+   const u=raw.toUpperCase();
+   return {symbol:u,name:u,exchange:u.endsWith(".KQ")?"KOSDAQ":"KOSPI",type:"주식"};
+ }
+ return null;
 }
-document.querySelectorAll("#stockTabs button").forEach(b=>b.addEventListener("click",()=>setActiveTab(b.dataset.tab)));
+function renderSearchResults(items){
+ $("results").innerHTML=items.map(x=>`<div class="result" data-symbol="${esc(x.symbol)}" data-name="${esc(x.name||x.symbol)}" data-exchange="${esc(x.exchange||"")}"><div><div class="name">${esc(x.name||x.symbol)}</div><div class="sub">${esc(x.exchange||"")} · ${esc(x.type||"")}</div></div><div class="sym">${esc(x.symbol)}</div></div>`).join("");
+ $("results").style.display="block";
+ document.querySelectorAll(".result").forEach(el=>el.addEventListener("click",()=>{
+   SELECTED_LABEL={symbol:el.dataset.symbol,name:el.dataset.name,exchange:el.dataset.exchange};
+   addRecent({symbol:el.dataset.symbol,name:el.dataset.name,exchange:el.dataset.exchange});
+   $("results").style.display="none";
+   loadChart(el.dataset.symbol);
+ }))
+}
+async function doSearch(){
+ const q=$("searchInput").value.trim();
+ if(!q)return;
+ $("error").style.display="none";
+ $("results").style.display="none";
+
+ const local=LOCAL_SEARCH[normSearchKey(q)]||directTickerResult(q);
+ if(local){renderSearchResults([local]);return;}
+
+ showLoad("종목을 찾는 중입니다…");
+ try{
+   const r=await fetch(`/api/search?q=${encodeURIComponent(q)}`,{cache:"no-store"});
+   const j=await r.json().catch(()=>({}));
+   if(!r.ok)throw new Error(j.error||"검색하지 못했습니다.");
+   const items=j.results||[];
+   if(!items.length)throw new Error("검색 결과가 없습니다.");
+   renderSearchResults(items);
+ }catch(e){
+   const fallback=directTickerResult(q);
+   if(fallback)renderSearchResults([fallback]);
+   else showError(e.message);
+ }finally{hideLoad()}
+}
+$("stockTabs").addEventListener("click",e=>{
+ const b=e.target.closest("button[data-tab]");
+ if(!b)return;
+ e.preventDefault();
+ setActiveTab(b.dataset.tab);
+});
 $("searchBtn").addEventListener("click",doSearch);$("searchInput").addEventListener("keydown",e=>{if(e.key==="Enter")doSearch()});
 $("backBtn").addEventListener("click",()=>showView("home"));$("analysisBackBtn").addEventListener("click",()=>showView("chart"));$("subAnalysis").addEventListener("click",()=>showView("analysis"));
 $("watchBtn").addEventListener("click",toggleWatch);$("analysisStar").addEventListener("click",toggleWatch);
