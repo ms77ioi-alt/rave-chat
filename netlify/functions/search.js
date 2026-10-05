@@ -3,6 +3,7 @@ const https=require("https");
 const STATIC={
  "삼성전자":{symbol:"005930.KS",name:"삼성전자",exchange:"KOSPI",type:"주식"},
  "삼성전자우":{symbol:"005935.KS",name:"삼성전자우",exchange:"KOSPI",type:"주식"},
+ "삼성중공업":{symbol:"010140.KS",name:"삼성중공업",exchange:"KOSPI",type:"주식"},
  "sk하이닉스":{symbol:"000660.KS",name:"SK하이닉스",exchange:"KOSPI",type:"주식"},
  "현대차":{symbol:"005380.KS",name:"현대차",exchange:"KOSPI",type:"주식"},
  "한화오션":{symbol:"042660.KS",name:"한화오션",exchange:"KOSPI",type:"주식"},
